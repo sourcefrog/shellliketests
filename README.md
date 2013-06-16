@@ -2,11 +2,27 @@ Shell-like tests
 ================
 
 Licence: GNU GPL v2+
+Home page: https://github.com/sourcefrog/shelliketests
+Maintainer: Martin Pool <mbp@sourcefrog.net>
 
+`shellliketests` allows users to write tests in a syntax very close to a
+shell session, using a restricted and limited set of commands that should
+be enough to mimic most of the behaviours.
 
-`shellliketests` allows users to write tests in a syntax very
-close to a shell session, using a restricted and limited set of commands
-that should be enough to mimic most of the behaviours.
+Features and benefits:
+
+* Provides a concise way to run commands and check output.
+
+* Commands can either be really run as subprocesses, or selectively
+  intercepted and run in-process (eg by calling something like the `main`
+  routine of a Python program).  Running in process may be substantially
+  faster and can allow more precise control of the test environment.
+
+* Abstracts cross-platform differences: for example `rm` can be used
+  across Windows and Unix.
+
+Shell-like tests don't cover every kind of test you should write, but they
+do make one class of tests easier.
 
 A script is a set of commands, each command is composed of:
 
