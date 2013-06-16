@@ -98,12 +98,6 @@ the file doesn't exist:
 
     $ cat file
 
-You can run files containing shell-like scripts with:
-
-    $ bzr test-script <script>
-
-where `<script>` is the path to the file containing the shell-like script.
-
 The actual use of ScriptRunner within a TestCase looks something like
 this:
 
