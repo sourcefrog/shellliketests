@@ -78,7 +78,7 @@ Examples
 The following will succeed only if `bzr add` outputs `adding file`:
 
     $ bzr add file
-    >adding file
+    adding file
 
 If you want the command to succeed for any output, just use:
 
@@ -111,19 +111,23 @@ This can be used to ignore entire lines too:
     # And here we explain that surprising fourth line
     <fourth line
     <last line
-    >first line
-    >...
-    >last line
+    # Now we expect cat to write out what was written in:
+    first line
+    second line
+    third line
+    fourth line
+    last line
 
 You can check the content of a file with `cat`:
 
-    $ cat <file
-    >expected content
+    $ cat file
+    expected content
 
 You can also check the existence of a file with `cat`, which will fail if
 the file does not exist:
 
     $ cat file
+    ...
 
 The actual use of ScriptRunner within a TestCase looks something like
 this:
