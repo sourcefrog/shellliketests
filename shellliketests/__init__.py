@@ -32,6 +32,8 @@ import errno
 import glob
 import os
 import shlex
+import shutil
+import tempfile
 import textwrap
 
 
@@ -92,7 +94,7 @@ def _script_to_commands(text, file_name=None):
         lineno += 1
         # Keep a copy for error reporting
         orig = line
-        comment =  line.find('#')
+        comment = line.find('#')
         if comment >= 0:
             # Delete comments
             # NB: this syntax means comments are allowed inside output, which
@@ -141,11 +143,11 @@ def _scan_redirection_options(args):
 
     :param args: The command line arguments
 
-    :return: A tuple containing: 
+    :return: A tuple containing:
         - The file name redirected from or None
         - The file name redirected to or None
         - The mode to open the output file or None
-        - The reamining arguments
+        - The remaining arguments
     """
     def redirected_file_name(direction, name, args):
         if name == '':
@@ -177,7 +179,7 @@ def _scan_redirection_options(args):
 
 class ScriptRunner(object):
     """Run a shell-like script from a test.
-    
+
     Can be used as:
 
     ...
@@ -198,9 +200,8 @@ class ScriptRunner(object):
     def run_script(self, test_case, text, null_output_matches_anything=False):
         """Run a shell-like script as a test.
 
-        :param test_case: A TestCase instance that should provide the fail(),
-            assertEqualDiff and _run_bzr_core() methods as well as a 'test_dir'
-            attribute used as a jail root.
+        :param test_case: A TestCase instance that should provide the fail()
+            methods.
 
         :param text: A shell-like script (see _script_to_commands for syntax).
 
@@ -209,8 +210,15 @@ class ScriptRunner(object):
             standard error.
         """
         self.null_output_matches_anything = null_output_matches_anything
-        for cmd, input, output, error in _script_to_commands(text):
-            self.run_command(test_case, cmd, input, output, error)
+        saved_dir = os.getcwd()
+        self.test_dir = tempfile.mkdtemp()
+        os.chdir(self.test_dir)
+        try:
+            for cmd, input, output, error in _script_to_commands(text):
+                self.run_command(test_case, cmd, input, output, error)
+        finally:
+            os.chdir(saved_dir)
+            shutil.rmtree(self.test_dir)
 
     def run_command(self, test_case, cmd, input, output, error):
         mname = 'do_' + cmd[0]
@@ -228,11 +236,11 @@ class ScriptRunner(object):
 
         try:
             self._check_output(output, actual_output, test_case)
-        except AssertionError, e:
+        except AssertionError as e:
             raise AssertionError(str(e) + " in stdout of command %s" % cmd)
         try:
             self._check_output(error, actual_error, test_case)
-        except AssertionError, e:
+        except AssertionError as e:
             raise AssertionError(str(e) +
                 " in stderr of running command %s" % cmd)
         if retcode and not error and actual_error:
@@ -273,7 +281,8 @@ class ScriptRunner(object):
             if expected == actual + '\n':
                 pass
             else:
-                test_case.assertEqualDiff(expected, actual)
+                # TODO(mbp): Show a diff if they differ.
+                test_case.assertEqual(expected, actual)
 
     def _pre_process_args(self, args):
         new_args = []
@@ -329,7 +338,7 @@ class ScriptRunner(object):
         for in_name in input_names:
             try:
                 inputs.append(self._read_input(None, in_name))
-            except IOError, e:
+            except IOError as e:
                 # Some filenames are illegal on Windows and generate EINVAL
                 # rather than just saying the filename doesn't exist
                 if e.errno in (errno.ENOENT, errno.EINVAL):
@@ -341,7 +350,7 @@ class ScriptRunner(object):
         # Handle output redirections
         try:
             output = self._write_output(output, out_name, out_mode)
-        except IOError, e:
+        except IOError as e:
             # If out_name cannot be created, we may get 'ENOENT', however if
             # out_name is something like '', we can get EINVAL
             if e.errno in (errno.ENOENT, errno.EINVAL):
@@ -362,26 +371,27 @@ class ScriptRunner(object):
         # Handle output redirections
         try:
             output = self._write_output(output, out_name, out_mode)
-        except IOError, e:
+        except IOError as e:
             if e.errno in (errno.ENOENT, errno.EINVAL):
                 return 1, None, '%s: No such file or directory\n' % (out_name,)
             raise
         return 0, output, None
 
-    def _get_jail_root(self, test_case):
-        return test_case.test_dir
-
-    def _ensure_in_jail(self, test_case, path):
-        jail_root = self._get_jail_root(test_case)
-        if not osutils.is_inside(jail_root, osutils.normalizepath(path)):
-            raise ValueError('%s is not inside %s' % (path, jail_root))
+    def _ensure_in_jail(self, path):
+        # TODO(mbp): Option to allow access to files outside?
+        jail_root = self.test_dir
+        abspath = os.path.abspath(path)
+        if (os.path.commonprefix([jail_root, abspath])
+            != jail_root):
+            raise ValueError('%s (absolute path %s) is not inside %s' % (
+                path, abspath, jail_root))
 
     def do_cd(self, test_case, input, args):
         if len(args) > 1:
             raise SyntaxError('Usage: cd [dir]')
         if len(args) == 1:
             d = args[0]
-            self._ensure_in_jail(test_case, d)
+            self._ensure_in_jail(d)
         else:
             # The test "home" directory is the root of its jail
             d = self._get_jail_root(test_case)
@@ -392,7 +402,7 @@ class ScriptRunner(object):
         if not args or len(args) != 1:
             raise SyntaxError('Usage: mkdir dir')
         d = args[0]
-        self._ensure_in_jail(test_case, d)
+        self._ensure_in_jail(d)
         os.mkdir(d)
         return 0, None, None
 
@@ -415,22 +425,21 @@ class ScriptRunner(object):
         if not args or opts:
             raise SyntaxError('Usage: rm [-fr] path+')
         for p in args:
-            self._ensure_in_jail(test_case, p)
-            # FIXME: Should we put that in osutils ?
+            self._ensure_in_jail(p)
             try:
                 os.remove(p)
-            except OSError, e:
+            except OSError as e:
                 # Various OSes raises different exceptions (linux: EISDIR,
                 #   win32: EACCES, OSX: EPERM) when invoked on a directory
                 if e.errno in (errno.EISDIR, errno.EPERM, errno.EACCES):
                     if recursive:
-                        osutils.rmtree(p)
+                        shutil.rmtree(p)
                     else:
                         err = error('Is a directory', p)
                         break
                 elif e.errno == errno.ENOENT:
                     if not force:
-                        err =  error('No such file or directory', p)
+                        err = error('No such file or directory', p)
                         break
                 else:
                     raise
@@ -442,6 +451,7 @@ class ScriptRunner(object):
 
     def do_mv(self, test_case, input, args):
         err = None
+
         def error(msg, src, dst):
             return "mv: cannot move %s to %s: %s\n" % (src, dst, msg)
 
@@ -453,7 +463,7 @@ class ScriptRunner(object):
             if os.path.isdir(dst):
                 real_dst = os.path.join(dst, os.path.basename(src))
             os.rename(src, real_dst)
-        except OSError, e:
+        except OSError as e:
             if e.errno == errno.ENOENT:
                 err = error('No such file or directory', src, dst)
             else:
@@ -469,4 +479,3 @@ def run_script(test_case, script_string, null_output_matches_anything=False):
     """Run the given script within a testcase"""
     return ScriptRunner().run_script(test_case, script_string,
                null_output_matches_anything=null_output_matches_anything)
-

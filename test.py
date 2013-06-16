@@ -32,6 +32,14 @@ class TestShellLikeTests(unittest.TestCase):
             hello world
             """)
 
+    def test_file_manipulation(self):
+        run_script(self, """
+            $ echo hello > afile
+            $ cat afile
+            hello
+            $ rm afile
+            """)
+
 
 if __name__ == '__main__':
     unittest.main()
