@@ -8,7 +8,15 @@ Shell-like tests
 
 `shellliketests` allows users to write tests in a syntax very close to a
 shell session, using a restricted and limited set of commands that should
-be enough to mimic most of the behaviours.
+be enough to mimic most of the behaviours.  For example:
+
+```python
+    def test_echo(self):
+        run_script(self, """
+            $ echo hello world
+            hello world
+            """)
+```
 
 Features and benefits:
 
@@ -21,6 +29,8 @@ Features and benefits:
 
 * Abstracts cross-platform differences: for example `rm` can be used
   across Windows and Unix.
+
+* Sections of output can be ignored if they don't matter (like in Doctests.)
 
 Shell-like tests don't cover every kind of test you should write, but they
 do make one class of tests easier.
