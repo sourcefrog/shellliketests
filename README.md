@@ -118,6 +118,7 @@ the file does not exist:
 The actual use of ScriptRunner within a TestCase looks something like
 this:
 
+```python
     from shelliketests import run_script
 
     def test_unshelve_keep(self):
@@ -133,9 +134,11 @@ this:
             $ cat file
             contents of file
             ''')
+```
 
 You can also test commands that read user interaction:
 
+```python
     def test_confirm_action(self):
         """You can write tests that demonstrate user confirmation"""
         run_script("""
@@ -144,11 +147,13 @@ You can also test commands that read user interaction:
             <yes
             yes
             """)
+```
 
 To avoid having to specify `...` for all commands whose output is
 irrelevant, the `run_script()` method may be passed the keyword argument
 `null_output_matches_anything=True`.  For example:
 
+```python
     def test_ignoring_null_output(self):
         run_script("""
             $ bzr init
@@ -156,6 +161,7 @@ irrelevant, the `run_script()` method may be passed the keyword argument
             $ bzr log --line
             1: ...
             """, null_output_matches_anything=True)
+```
 
 Authors
 -------
