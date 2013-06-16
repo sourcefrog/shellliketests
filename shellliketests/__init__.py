@@ -22,6 +22,9 @@
 # probably just run the external command.
 #
 # TODO(mbp): Script to run an example from a given file, on the command line.
+#
+# TODO(mbp): Allow callers to choose whether external commands are allowed and
+# what path is used to find them.
 
 
 import doctest
@@ -30,6 +33,7 @@ import glob
 import os
 import shlex
 import shutil
+import subprocess
 import tempfile
 import textwrap
 
@@ -218,17 +222,28 @@ class ScriptRunner(object):
             shutil.rmtree(self.test_dir)
 
     def invoke_command(self, cmd, input):
-        mname = 'do_' + cmd[0]
         if input is None:
-            str_input = ''
+            input_str = ''
         else:
-            str_input = ''.join(input)
+            input_str = ''.join(input)
+        command_name = cmd[0]
         args = list(self._pre_process_args(cmd[1:]))
-        method = getattr(self, mname, None)
-        if method is None:
-            raise SyntaxError('Command not found "%s"' % (cmd[0],),
-                              (None, 1, 1, ' '.join(cmd)))
-        return method(str_input, args)
+        internal_command_method = getattr(self, 'do_' + command_name, None)
+        if internal_command_method:
+            return internal_command_method(input_str, args)
+        else:
+            return self._invoke_external_command(command_name, args, input_str)
+            # raise SyntaxError('Command not found "%s"' % (cmd[0],),
+            #                   (None, 1, 1, ' '.join(cmd)))
+
+    def _invoke_external_command(self, command_name, args, input_str):
+        pope = subprocess.Popen(
+                [command_name] + args,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+        stdout, stderr = pope.communicate(input_str)
+        return pope.returncode, stdout, stderr
 
     def run_command(self, test_case, cmd, input, output, error):
         retcode, actual_output, actual_error = self.invoke_command(cmd, input)

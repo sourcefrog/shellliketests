@@ -40,6 +40,13 @@ class TestShellLikeTests(unittest.TestCase):
             $ rm afile
             """)
 
+    def test_external_command(self):
+        run_script(self, """
+            $ python -c "print('hello')"
+            hello
+            """)
+
+    # TODO(mbp): reporting of a nonexistent command
 
 if __name__ == '__main__':
     unittest.main()
