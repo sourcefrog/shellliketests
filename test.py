@@ -18,6 +18,7 @@
 
 """Self-test and example for shellliketests."""
 
+import os
 import unittest
 
 import shellliketests
@@ -46,7 +47,17 @@ class TestShellLikeTests(unittest.TestCase):
             hello
             """)
 
+    def test_external_command_on_path(self):
+        testdata_dir = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), 'testdata'))
+        run_script(self, """
+            $ hello.py
+            hello from hello.py
+            """,
+            path=[testdata_dir])
+
     # TODO(mbp): reporting of a nonexistent command
+
 
 if __name__ == '__main__':
     unittest.main()

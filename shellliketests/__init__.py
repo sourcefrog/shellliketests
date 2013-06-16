@@ -15,8 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-"""Shell-like test scripts.
-"""
+"""Shell-like test scripts."""
 
 # TODO(mbp): Provide different test-execution strategies, but by default
 # probably just run the external command.
@@ -198,22 +197,31 @@ class ScriptRunner(object):
         self.output_checker = doctest.OutputChecker()
         self.check_options = doctest.ELLIPSIS
 
-    def run_script(self, test_case, text, null_output_matches_anything=False):
+    def run_script(self, test_case, text, null_output_matches_anything=False,
+            path=None):
         """Run a shell-like script as a test.
 
-        :param test_case: A TestCase instance that should provide the fail()
-            methods.
+        Args:
+            path: An optional list of strings, to be prepended to the path
+                searched for external commands.  These should normally be
+                absolute paths so they remain stable after entering the test
+                temporary directory.
 
-        :param text: A shell-like script (see _script_to_commands for syntax).
+            test_case: A TestCase instance that should provide the fail()
+                methods.
 
-        :param null_output_matches_anything: For commands with no specified
-            output, ignore any output that does happen, including output on
-            standard error.
+            text: A shell-like script (see _script_to_commands for syntax).
+
+            null_output_matches_anything: For commands with no specified
+                output, ignore any output that does happen, including output on
+                standard error.
         """
         self.null_output_matches_anything = null_output_matches_anything
         saved_dir = os.getcwd()
         self.test_dir = tempfile.mkdtemp()
         os.chdir(self.test_dir)
+        self.path = path
+        self.file_encoding = 'UTF-8'
         try:
             for cmd, input, output, error in _script_to_commands(text):
                 self.run_command(test_case, cmd, input, output, error)
@@ -237,13 +245,20 @@ class ScriptRunner(object):
             #                   (None, 1, 1, ' '.join(cmd)))
 
     def _invoke_external_command(self, command_name, args, input_str):
+        env = os.environ.copy()
+        if self.path:
+            new_path = os.pathsep.join(self.path + [env['PATH']])
+            env['PATH'] = new_path
         pope = subprocess.Popen(
                 [command_name] + args,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
+                stderr=subprocess.PIPE,
+                env=env)
         stdout, stderr = pope.communicate(input_str)
-        return pope.returncode, stdout, stderr
+        return (pope.returncode,
+                stdout.decode(self.file_encoding),
+                stderr.decode(self.file_encoding))
 
     def run_command(self, test_case, cmd, input, output, error):
         retcode, actual_output, actual_error = self.invoke_command(cmd, input)
@@ -323,7 +338,7 @@ class ScriptRunner(object):
             infile = open(in_name, 'rb')
             try:
                 # Command redirection takes precedence over provided input
-                input = infile.read().decode('UTF-8')
+                input = infile.read().decode(self.file_encoding)
             finally:
                 infile.close()
         return input
@@ -332,7 +347,7 @@ class ScriptRunner(object):
         if out_name is not None:
             outfile = open(out_name, out_mode)
             try:
-                outfile.write(output.encode('UTF-8'))
+                outfile.write(output.encode(self.file_encoding))
             finally:
                 outfile.close()
             output = None
@@ -489,7 +504,7 @@ class ScriptRunner(object):
         return retcode, None, err
 
 
-def run_script(test_case, script_string, null_output_matches_anything=False):
+def run_script(test_case, script_string, **kwargs):
     """Run the given script within a testcase"""
     return ScriptRunner().run_script(test_case, script_string,
-               null_output_matches_anything=null_output_matches_anything)
+            **kwargs)
