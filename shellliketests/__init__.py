@@ -16,8 +16,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 """Shell-like test scripts.
-
-See developers/testing.html for more explanations.
 """
 
 # TODO(mbp): Provide different test-execution strategies, but by default
