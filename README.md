@@ -36,10 +36,10 @@ Input, output and error lines can be specified in any order.
 Except for the expected output, all lines start with a special
 string (based on their origin when used under a Unix shell):
 
-* '$ ' for the command,
-* '<' for input,
+* `$ ` for the command,
+* `<` for input,
 * nothing for output,
-* '2>' for errors,
+* `2>` for errors,
 
 Comments can be added anywhere, they start with '#' and end with
 the line.
