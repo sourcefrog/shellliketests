@@ -27,6 +27,10 @@ from shellliketests import run_script
 
 class TestShellLikeTests(unittest.TestCase):
 
+    def test_library_version(self):
+        self.assertEqual('0.1.0', shellliketests.__version__)
+        self.assertEqual((0, 1, 0), shellliketests.__version_info__)
+
     def test_echo(self):
         run_script(self, """
             $ echo hello world
