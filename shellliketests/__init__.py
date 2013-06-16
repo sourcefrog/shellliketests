@@ -21,9 +21,6 @@
 # TODO(mbp): Provide different test-execution strategies, but by default
 # probably just run the external command.
 #
-# TODO(mbp): Probably change to a temporary directory by default to run all
-# tests?
-#
 # TODO(mbp): Script to run an example from a given file, on the command line.
 
 
@@ -220,18 +217,21 @@ class ScriptRunner(object):
             os.chdir(saved_dir)
             shutil.rmtree(self.test_dir)
 
-    def run_command(self, test_case, cmd, input, output, error):
+    def invoke_command(self, cmd, input):
         mname = 'do_' + cmd[0]
-        method = getattr(self, mname, None)
-        if method is None:
-            raise SyntaxError('Command not found "%s"' % (cmd[0],),
-                              (None, 1, 1, ' '.join(cmd)))
         if input is None:
             str_input = ''
         else:
             str_input = ''.join(input)
         args = list(self._pre_process_args(cmd[1:]))
-        retcode, actual_output, actual_error = method(str_input, args)
+        method = getattr(self, mname, None)
+        if method is None:
+            raise SyntaxError('Command not found "%s"' % (cmd[0],),
+                              (None, 1, 1, ' '.join(cmd)))
+        return method(str_input, args)
+
+    def run_command(self, test_case, cmd, input, output, error):
+        retcode, actual_output, actual_error = self.invoke_command(cmd, input)
 
         try:
             self._check_output(output, actual_output, test_case)
