@@ -231,8 +231,7 @@ class ScriptRunner(object):
         else:
             str_input = ''.join(input)
         args = list(self._pre_process_args(cmd[1:]))
-        retcode, actual_output, actual_error = method(test_case,
-                                                      str_input, args)
+        retcode, actual_output, actual_error = method(str_input, args)
 
         try:
             self._check_output(output, actual_output, test_case)
@@ -324,7 +323,7 @@ class ScriptRunner(object):
             output = None
         return output
 
-    def do_cat(self, test_case, input, args):
+    def do_cat(self, input, args):
         (in_name, out_name, out_mode, args) = _scan_redirection_options(args)
         if args and in_name is not None:
             raise SyntaxError('Specify a file OR use redirection')
@@ -358,7 +357,7 @@ class ScriptRunner(object):
             raise
         return 0, output, None
 
-    def do_echo(self, test_case, input, args):
+    def do_echo(self, input, args):
         (in_name, out_name, out_mode, args) = _scan_redirection_options(args)
         if input or in_name:
             raise SyntaxError('echo doesn\'t read from stdin')
@@ -386,7 +385,7 @@ class ScriptRunner(object):
             raise ValueError('%s (absolute path %s) is not inside %s' % (
                 path, abspath, jail_root))
 
-    def do_cd(self, test_case, input, args):
+    def do_cd(self, input, args):
         if len(args) > 1:
             raise SyntaxError('Usage: cd [dir]')
         if len(args) == 1:
@@ -394,11 +393,11 @@ class ScriptRunner(object):
             self._ensure_in_jail(d)
         else:
             # The test "home" directory is the root of its jail
-            d = self._get_jail_root(test_case)
+            d = self.test_dir
         os.chdir(d)
         return 0, None, None
 
-    def do_mkdir(self, test_case, input, args):
+    def do_mkdir(self, input, args):
         if not args or len(args) != 1:
             raise SyntaxError('Usage: mkdir dir')
         d = args[0]
@@ -406,7 +405,7 @@ class ScriptRunner(object):
         os.mkdir(d)
         return 0, None, None
 
-    def do_rm(self, test_case, input, args):
+    def do_rm(self, input, args):
         err = None
 
         def error(msg, path):
@@ -449,7 +448,7 @@ class ScriptRunner(object):
             retcode = 0
         return retcode, None, err
 
-    def do_mv(self, test_case, input, args):
+    def do_mv(self, input, args):
         err = None
 
         def error(msg, src, dst):
