@@ -4,6 +4,7 @@ Shell-like tests
 Licence: GNU GPL v2+
 Home page: https://github.com/sourcefrog/shelliketests
 Maintainer: Martin Pool <mbp@sourcefrog.net>
+Supports: Python 2.6..3.3
 
 `shellliketests` allows users to write tests in a syntax very close to a
 shell session, using a restricted and limited set of commands that should

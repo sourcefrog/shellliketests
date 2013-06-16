@@ -309,7 +309,7 @@ class ScriptRunner(object):
             infile = open(in_name, 'rb')
             try:
                 # Command redirection takes precedence over provided input
-                input = infile.read()
+                input = infile.read().decode('UTF-8')
             finally:
                 infile.close()
         return input
@@ -318,7 +318,7 @@ class ScriptRunner(object):
         if out_name is not None:
             outfile = open(out_name, out_mode)
             try:
-                outfile.write(output)
+                outfile.write(output.encode('UTF-8'))
             finally:
                 outfile.close()
             output = None
